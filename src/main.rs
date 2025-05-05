@@ -6,7 +6,7 @@ mod world;
 
 fn main() {
     App::new()
-        .insert_resource(ClearColor(Color::linear_rgba(1.0, 1.0, 1.0, 1.0)))
+        .insert_resource(ClearColor(Color::linear_rgba(0.0, 0.0, 0.0, 1.0)))
         .add_plugins(DefaultPlugins)
         .add_systems(Startup, setup)
         .add_systems(Startup, generate_world)
@@ -34,8 +34,10 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
 }
 
 const PLAYER_SLOWDOWN: f32 = 0.25;
+const MID_AIR_SLOWDOWN: f32 = 0.95;
 const MIN_SPEED: f32 = 0.001;
 const MAX_VEL: f32 = 120.0;
+const MID_AIR_SPEED_MULT: usize = 1;
 
 fn handle_gamepad_input(
     mut query: Query<(&mut Player, &mut Transform)>,
@@ -46,18 +48,35 @@ fn handle_gamepad_input(
     for gamepad in gamepads.iter() {
         let gamepad_left_stick = gamepad.left_stick();
         for (mut player, mut player_transform) in &mut query {
-            let val_on_grid =
+            if gamepad.just_pressed(GamepadButton::South) && player.jump_start.is_none() {
+                player.jump_start = Some(time.elapsed_secs_f64())
+            }
+            let curr_height = player.get_height(time.elapsed_secs_f64());
+            if curr_height == 0.0 && player.jump_start.is_some() {
+                player.jump_start = None;
+            }
+            let grid_val =
                 match world.get_val_at_coord(player.grid_pos.x as i32, player.grid_pos.y as i32) {
                     Some(val) => val,
                     None => 0,
                 } + 1;
+            player_transform.scale = Vec3::splat(1.0) * (curr_height + (grid_val as f32 / 16.0));
+            let val_on_grid = if curr_height > 0.0 {
+                MID_AIR_SPEED_MULT
+            } else {
+                grid_val
+            };
             let delta_f32 = time.delta_secs_f64() as f32;
             let dir_times_speed_and_time = gamepad_left_stick * player.speed / delta_f32;
             if dir_times_speed_and_time.length() > 0.0 {
                 player.velocity += dir_times_speed_and_time * (val_on_grid as f32 / 16.0);
             }
             if player.velocity.length() > MIN_SPEED {
-                player.velocity *= PLAYER_SLOWDOWN;
+                player.velocity *= if curr_height > 0.0 {
+                    MID_AIR_SLOWDOWN
+                } else {
+                    PLAYER_SLOWDOWN
+                };
                 let new_vel = player.velocity.length();
                 if new_vel > MAX_VEL {
                     player.velocity *= 1.0 / (new_vel / MAX_VEL);
