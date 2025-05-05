@@ -1,13 +1,13 @@
 use bevy::prelude::*;
 use player::Player;
-use world::{TILE_SIZE, generate_world};
+use world::{TILE_SIZE, WORLD_HEIGHT, WORLD_WIDTH, WorldMap, generate_world};
 mod player;
 mod world;
 
 fn main() {
     App::new()
         .insert_resource(ClearColor(Color::linear_rgba(1.0, 1.0, 1.0, 1.0)))
-        .add_plugins(DefaultPlugins.set(ImagePlugin::default_nearest()))
+        .add_plugins(DefaultPlugins)
         .add_systems(Startup, setup)
         .add_systems(Startup, generate_world)
         .add_systems(Update, camera_transform_update)
@@ -21,27 +21,40 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
 
     commands.spawn((
         Sprite::from_image(asset_server.load("dude.png")),
-        Player::new(Vec2::ZERO),
+        Transform::from_xyz(
+            (WORLD_WIDTH as f32 / 2.0).round() * TILE_SIZE,
+            (WORLD_HEIGHT as f32 / 2.0).round() * TILE_SIZE,
+            5.0,
+        ),
+        Player::new(Vec2::new(
+            (WORLD_WIDTH as f32 / 2.0).round(),
+            (WORLD_HEIGHT as f32 / 2.0).round(),
+        )),
     ));
 }
 
-const PLAYER_SIZE: f32 = 32.0;
 const PLAYER_SLOWDOWN: f32 = 0.25;
-const MIN_SPEED: f32 = 0.00000001;
-const MAX_VEL: f32 = 40.0;
+const MIN_SPEED: f32 = 0.001;
+const MAX_VEL: f32 = 120.0;
 
 fn handle_gamepad_input(
     mut query: Query<(&mut Player, &mut Transform)>,
+    world: Res<WorldMap>,
     gamepads: Query<&Gamepad>,
     time: Res<Time>,
 ) {
     for gamepad in gamepads.iter() {
         let gamepad_left_stick = gamepad.left_stick();
         for (mut player, mut player_transform) in &mut query {
+            let val_on_grid =
+                match world.get_val_at_coord(player.grid_pos.x as i32, player.grid_pos.y as i32) {
+                    Some(val) => val,
+                    None => 0,
+                } + 1;
             let delta_f32 = time.delta_secs_f64() as f32;
             let dir_times_speed_and_time = gamepad_left_stick * player.speed / delta_f32;
             if dir_times_speed_and_time.length() > 0.0 {
-                player.velocity += dir_times_speed_and_time;
+                player.velocity += dir_times_speed_and_time * (val_on_grid as f32 / 16.0);
             }
             if player.velocity.length() > MIN_SPEED {
                 player.velocity *= PLAYER_SLOWDOWN;
@@ -54,10 +67,16 @@ fn handle_gamepad_input(
                     player.velocity.y * delta_f32,
                     0.0,
                 );
-                player.grid_pos.x =
-                    ((player_transform.translation.x - (PLAYER_SIZE / 2.0)) / TILE_SIZE).round();
-                player.grid_pos.y =
-                    ((player_transform.translation.y - (PLAYER_SIZE / 2.0)) / TILE_SIZE).round();
+                player.grid_pos.x = (player_transform.translation.x / TILE_SIZE).round();
+                if player.grid_pos.x < 0.0 {
+                    player.grid_pos.x = 0.0
+                }
+                player.grid_pos.y = (player_transform.translation.y / TILE_SIZE).round();
+                if player.grid_pos.y < 0.0 {
+                    player.grid_pos.y = 0.0
+                }
+            } else if player.velocity != Vec2::ZERO {
+                player.velocity = Vec2::ZERO;
             }
 
             if gamepad.just_pressed(GamepadButton::DPadUp) {
@@ -70,22 +89,23 @@ fn handle_gamepad_input(
     }
 }
 
-const CAM_SPEED: f32 = 50.0;
+const CAM_SPEED: f32 = 5.0;
 
 fn camera_transform_update(
     mut cam_query: Query<&mut Transform, With<Camera>>,
-    player_query: Query<&Player>,
+    pleyer_t_query: Query<(&Transform, &Player), Without<Camera>>,
+
     time: Res<Time>,
 ) {
-    for player in player_query.iter() {
-        for mut transform in cam_query.iter_mut() {
-            let mut diff = Vec3::new(
-                player.grid_pos.x as f32 * TILE_SIZE,
-                player.grid_pos.y as f32 * TILE_SIZE,
-                transform.translation.z,
-            ) - transform.translation;
-            diff = diff * time.delta_secs_f64() as f32 * CAM_SPEED;
-            transform.translation += diff;
-        }
+    let mut pos = Vec2::ZERO;
+    for (player_t, _player) in pleyer_t_query.iter() {
+        pos.x = player_t.translation.x;
+        pos.y = player_t.translation.y;
+    }
+
+    for mut transform in cam_query.iter_mut() {
+        let mut diff = Vec3::new(pos.x, pos.y, transform.translation.z) - transform.translation;
+        diff = diff * time.delta_secs_f64() as f32 * CAM_SPEED;
+        transform.translation += diff;
     }
 }

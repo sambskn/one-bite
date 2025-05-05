@@ -1,7 +1,6 @@
 use bevy::prelude::*;
 
-const PLAYER_SPEED: f32 = 5.0;
-
+const PLAYER_SPEED: f32 = 7.0;
 
 #[derive(Component)]
 pub struct Player {
@@ -12,7 +11,11 @@ pub struct Player {
 
 impl Player {
     pub fn new(grid_pos: Vec2) -> Self {
-        Player { grid_pos, velocity: Vec2::ZERO, speed: PLAYER_SPEED }
+        Player {
+            grid_pos,
+            velocity: Vec2::ZERO,
+            speed: PLAYER_SPEED,
+        }
     }
 }
 
