@@ -1,7 +1,9 @@
 use bevy::prelude::*;
 use player::Player;
+use ui::Arrow;
 use world::{TILE_SIZE, WORLD_HEIGHT, WORLD_WIDTH, WorldMap, generate_world};
 mod player;
+mod ui;
 mod world;
 
 fn main() {
@@ -10,7 +12,9 @@ fn main() {
         .add_plugins(DefaultPlugins)
         .add_systems(Startup, setup)
         .add_systems(Startup, generate_world)
+        .add_systems(Startup, ui::setup_ui)
         .add_systems(Update, camera_transform_update)
+        .add_systems(Update, arrow_update)
         .add_systems(Update, handle_gamepad_input)
         .run();
 }
@@ -126,5 +130,14 @@ fn camera_transform_update(
         let mut diff = Vec3::new(pos.x, pos.y, transform.translation.z) - transform.translation;
         diff = diff * time.delta_secs_f64() as f32 * CAM_SPEED;
         transform.translation += diff;
+    }
+}
+
+pub fn arrow_update(mut arrow_query: Query<&mut Transform, With<Arrow>>, time: Res<Time>) {
+    // TODO: Get current z rotation of arrow
+    // find diff between that and player direction to target
+    // rotate arrow towards that point
+    for mut arrow_transform in &mut arrow_query {
+        arrow_transform.rotate_local_z((time.delta_secs() * 10.0).to_radians());
     }
 }

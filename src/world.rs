@@ -3,9 +3,10 @@ use noise::{
     Fbm, Perlin,
     utils::{NoiseMapBuilder, PlaneMapBuilder},
 };
+use rand::Rng;
 
-pub const WORLD_WIDTH: usize = 200;
-pub const WORLD_HEIGHT: usize = 200;
+pub const WORLD_WIDTH: usize = 30;
+pub const WORLD_HEIGHT: usize = 30;
 
 #[derive(Resource, Clone, Copy)]
 pub struct WorldMap {
@@ -24,6 +25,11 @@ impl WorldMap {
     pub fn set_val_at_coord(&mut self, x: usize, y: usize, value: usize) {
         self.vals[x + (y * WORLD_WIDTH)] = value;
     }
+}
+
+#[derive(Component)]
+pub struct Target {
+    pub position: Vec2,
 }
 
 pub const TILE_SIZE: f32 = 32.0;
@@ -46,6 +52,25 @@ pub fn generate_world(
     let mut world_map = WorldMap {
         vals: [0; WORLD_WIDTH * WORLD_HEIGHT],
     };
+    // load target texture
+    // and determine random location within world bounds
+    let mut rng = rand::rng();
+    let target_texture = asset_server.load("haus.png");
+    let target = Target {
+        position: Vec2::new(
+            rng.random_range(0..WORLD_WIDTH) as f32,
+            rng.random_range(0..WORLD_HEIGHT) as f32,
+        ),
+    };
+    commands.spawn((
+        Sprite::from_image(target_texture),
+        Transform::from_xyz(
+            target.position.x * TILE_SIZE,
+            target.position.y * TILE_SIZE,
+            4.0,
+        ),
+        target,
+    ));
     for y in 0..WORLD_WIDTH {
         for x in 0..WORLD_HEIGHT {
             let val = (plane_map_builder.get_value(x, y) as f32) + 0.5;
