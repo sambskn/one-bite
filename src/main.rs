@@ -4,9 +4,18 @@ use bevy::{prelude::*, window::WindowResolution};
 use player::Player;
 use ui::{Arrow, SECONDS_IN_TIMER, SterbTime};
 use world::{TILE_SIZE, Target, WORLD_HEIGHT, WORLD_WIDTH, WorldMap, generate_world};
+mod menu;
 mod player;
 mod ui;
 mod world;
+
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Default, States)]
+enum GameState {
+    #[default]
+    MainMenu,
+    Dialogue,
+    Movement,
+}
 
 fn main() {
     App::new()
@@ -19,13 +28,26 @@ fn main() {
             }),
             ..default()
         }))
-        .add_systems(Startup, setup)
-        .add_systems(Startup, generate_world)
-        .add_systems(Startup, ui::setup_ui)
-        .add_systems(Update, camera_transform_update)
-        .add_systems(Update, arrow_update)
-        .add_systems(Update, handle_gamepad_input)
-        .add_systems(Update, timer_update)
+        .insert_state(GameState::MainMenu)
+        .add_systems(Startup, menu::menu_setup)
+        .add_systems(
+            Update,
+            handle_gamepad_input_menu.run_if(in_state(GameState::MainMenu)),
+        )
+        .add_systems(OnExit(GameState::MainMenu), menu::clear_menu_content)
+        .add_systems(OnExit(GameState::MainMenu), setup)
+        .add_systems(OnExit(GameState::MainMenu), generate_world)
+        .add_systems(OnExit(GameState::MainMenu), ui::setup_ui)
+        .add_systems(
+            Update,
+            camera_transform_update.run_if(in_state(GameState::Movement)),
+        )
+        .add_systems(Update, arrow_update.run_if(in_state(GameState::Movement)))
+        .add_systems(
+            Update,
+            handle_gamepad_input.run_if(in_state(GameState::Movement)),
+        )
+        .add_systems(Update, timer_update.run_if(in_state(GameState::Movement)))
         .run();
 }
 
@@ -118,6 +140,17 @@ fn handle_gamepad_input(
             if gamepad.just_pressed(GamepadButton::DPadDown) {
                 player.speed += -0.5;
             }
+        }
+    }
+}
+
+fn handle_gamepad_input_menu(
+    mut next_game_state: ResMut<NextState<GameState>>,
+    gamepads: Query<&Gamepad>,
+) {
+    for gamepad in gamepads.iter() {
+        if gamepad.just_pressed(GamepadButton::South) {
+            next_game_state.set(GameState::Movement);
         }
     }
 }
