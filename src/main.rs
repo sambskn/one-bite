@@ -1,7 +1,9 @@
+use std::f32::consts::PI;
+
 use bevy::prelude::*;
 use player::Player;
 use ui::Arrow;
-use world::{TILE_SIZE, WORLD_HEIGHT, WORLD_WIDTH, WorldMap, generate_world};
+use world::{TILE_SIZE, Target, WORLD_HEIGHT, WORLD_WIDTH, WorldMap, generate_world};
 mod player;
 mod ui;
 mod world;
@@ -133,11 +135,20 @@ fn camera_transform_update(
     }
 }
 
-pub fn arrow_update(mut arrow_query: Query<&mut Transform, With<Arrow>>, time: Res<Time>) {
-    // TODO: Get current z rotation of arrow
-    // find diff between that and player direction to target
-    // rotate arrow towards that point
+pub fn arrow_update(
+    mut arrow_query: Query<&mut Transform, With<Arrow>>,
+    target_query: Query<&Target>,
+    player_query: Query<&Player>,
+) {
+    let mut player_to_target = Vec2::ZERO;
+    for player in &player_query {
+        for target in &target_query {
+            player_to_target = target.position - player.grid_pos;
+        }
+    }
     for mut arrow_transform in &mut arrow_query {
-        arrow_transform.rotate_local_z((time.delta_secs() * 10.0).to_radians());
+        let target_angle = player_to_target.to_angle();
+        arrow_transform.rotation =
+            Quat::from_euler(EulerRot::XYZ, 0.0, 0.0, (PI / 2.0) - target_angle);
     }
 }
