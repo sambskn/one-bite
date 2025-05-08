@@ -1,50 +1,195 @@
+use std::time::Duration;
+
 use bevy::prelude::*;
 
 #[derive(Component)]
 pub struct Arrow;
 
+#[derive(Component)]
+pub struct SterbTime(pub Timer);
+
+pub const SECONDS_IN_TIMER: f32 = 60.0 * 5.0;
+
 pub fn setup_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
     let arrow_texture = asset_server.load("arrow.png");
+    let gorb_texture = asset_server.load("gorb.png");
+    let frame_texture = asset_server.load("box_frame.png");
+    let slicer = TextureSlicer {
+        border: BorderRect::all(5.0),
+        center_scale_mode: SliceScaleMode::Stretch,
+        sides_scale_mode: SliceScaleMode::Stretch,
+        max_corner_scale: 1.0,
+    };
+
     commands.spawn((
         Node {
             position_type: PositionType::Absolute,
-            left: Val::Px(10.0),
-            top: Val::Px(10.0),
-            max_height: Val::Px(64.0),
-            max_width: Val::Px(256.0),
+            left: Val::Px(0.0),
+            right: Val::Px(0.0),
+            bottom: Val::Px(0.0),
+            height: Val::Vh(25.0),
+            width: Val::Vw(100.0),
+            padding: UiRect::all(Val::Px(10.0)),
             display: Display::Flex,
+            flex_direction: FlexDirection::Row,
             justify_content: JustifyContent::Center,
             align_items: AlignItems::Center,
             ..default()
         },
         children![
             (
-                Node { ..default() },
-                Arrow,
-                children![(
-                    ImageNode {
-                        image: arrow_texture,
-                        ..default()
-                    },
-                    Node {
-                        max_width: Val::Px(32.0),
-                        max_height: Val::Px(32.0),
-                        ..default()
-                    }
-                )]
+                Node {
+                    display: Display::Flex,
+                    justify_content: JustifyContent::Center,
+                    align_items: AlignItems::Center,
+                    padding: UiRect::all(Val::Px(16.0)),
+                    margin: UiRect::all(Val::Px(8.0)),
+                    ..default()
+                },
+                ImageNode {
+                    image: frame_texture.clone(),
+                    image_mode: NodeImageMode::Sliced(slicer.clone()),
+                    ..default()
+                },
+                children![
+                    (
+                        Node { ..default() },
+                        Arrow,
+                        children![(
+                            ImageNode {
+                                image: arrow_texture,
+                                ..default()
+                            },
+                            Node {
+                                width: Val::Px(32.0),
+                                height: Val::Px(32.0),
+                                ..default()
+                            }
+                        )]
+                    ),
+                    (
+                        Node {
+                            margin: UiRect {
+                                left: Val::Px(10.0),
+                                right: Val::Px(0.0),
+                                top: Val::Px(0.0),
+                                bottom: Val::Px(0.0)
+                            },
+                            ..default()
+                        },
+                        Text::new("ordfinder"),
+                        TextFont {
+                            font: asset_server.load("castlevainia3nes.ttf"),
+                            font_size: 12.0,
+                            ..default()
+                        },
+                    )
+                ],
             ),
             (
                 Node {
-                    margin: UiRect {
-                        left: Val::Px(10.0),
-                        right: Val::Px(0.0),
-                        top: Val::Px(0.0),
-                        bottom: Val::Px(0.0)
-                    },
+                    display: Display::Flex,
+                    justify_content: JustifyContent::Center,
+                    align_items: AlignItems::Center,
+                    flex_direction: FlexDirection::Column,
+                    padding: UiRect::all(Val::Px(16.0)),
+                    margin: UiRect::all(Val::Px(8.0)),
                     ..default()
                 },
-                Text::new("ordfinder")
-            )
+                ImageNode {
+                    image: frame_texture.clone(),
+                    image_mode: NodeImageMode::Sliced(slicer.clone()),
+                    ..default()
+                },
+                children![
+                    (
+                        Node {
+                            margin: UiRect {
+                                left: Val::Px(0.0),
+                                right: Val::Px(0.0),
+                                top: Val::Px(0.0),
+                                bottom: Val::Px(10.0)
+                            },
+                            ..default()
+                        },
+                        Text::new("gorbs in der chamber"),
+                        TextFont {
+                            font: asset_server.load("castlevainia3nes.ttf"),
+                            font_size: 12.0,
+                            ..default()
+                        },
+                    ),
+                    (
+                        Node {
+                            display: Display::Flex,
+                            justify_content: JustifyContent::Start,
+                            align_items: AlignItems::Center,
+                            flex_direction: FlexDirection::Row,
+                            ..default()
+                        },
+                        children![(
+                            ImageNode {
+                                image: gorb_texture,
+                                ..default()
+                            },
+                            Node {
+                                max_width: Val::Px(32.0),
+                                max_height: Val::Px(32.0),
+                                margin: UiRect::all(Val::Px(2.0)),
+                                ..default()
+                            }
+                        )]
+                    )
+                ],
+            ),
+            (
+                Node {
+                    display: Display::Flex,
+                    justify_content: JustifyContent::Center,
+                    align_items: AlignItems::Center,
+                    flex_direction: FlexDirection::Column,
+                    padding: UiRect::all(Val::Px(16.0)),
+                    margin: UiRect::all(Val::Px(8.0)),
+                    ..default()
+                },
+                ImageNode {
+                    image: frame_texture.clone(),
+                    image_mode: NodeImageMode::Sliced(slicer.clone()),
+                    ..default()
+                },
+                children![
+                    (
+                        Node {
+                            margin: UiRect {
+                                left: Val::Px(00.0),
+                                right: Val::Px(0.0),
+                                top: Val::Px(0.0),
+                                bottom: Val::Px(10.0)
+                            },
+                            ..default()
+                        },
+                        Text::new("sterbenzeit"),
+                        TextFont {
+                            font: asset_server.load("castlevainia3nes.ttf"),
+                            font_size: 12.0,
+                            ..default()
+                        },
+                    ),
+                    (
+                        Node { ..default() },
+                        Text::new("00:30:00"),
+                        TextFont {
+                            font: asset_server.load("castlevainia3nes.ttf"),
+                            font_size: 14.0,
+                            ..default()
+                        },
+                        SterbTime(Timer::new(
+                            Duration::new(SECONDS_IN_TIMER as u64, 0),
+                            TimerMode::Once
+                        ))
+                    )
+                ],
+            ),
         ],
     ));
 }

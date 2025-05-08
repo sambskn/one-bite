@@ -1,8 +1,8 @@
 use std::f32::consts::PI;
 
-use bevy::prelude::*;
+use bevy::{prelude::*, window::WindowResolution};
 use player::Player;
-use ui::Arrow;
+use ui::{Arrow, SECONDS_IN_TIMER, SterbTime};
 use world::{TILE_SIZE, Target, WORLD_HEIGHT, WORLD_WIDTH, WorldMap, generate_world};
 mod player;
 mod ui;
@@ -11,13 +11,21 @@ mod world;
 fn main() {
     App::new()
         .insert_resource(ClearColor(Color::linear_rgba(0.0, 0.0, 0.0, 1.0)))
-        .add_plugins(DefaultPlugins)
+        .add_plugins(DefaultPlugins.set(WindowPlugin {
+            primary_window: Some(Window {
+                resolution: WindowResolution::new(600.0, 500.0),
+                title: "gorb transporter".to_string(),
+                ..default()
+            }),
+            ..default()
+        }))
         .add_systems(Startup, setup)
         .add_systems(Startup, generate_world)
         .add_systems(Startup, ui::setup_ui)
         .add_systems(Update, camera_transform_update)
         .add_systems(Update, arrow_update)
         .add_systems(Update, handle_gamepad_input)
+        .add_systems(Update, timer_update)
         .run();
 }
 
@@ -150,5 +158,15 @@ pub fn arrow_update(
         let target_angle = player_to_target.to_angle();
         arrow_transform.rotation =
             Quat::from_euler(EulerRot::XYZ, 0.0, 0.0, (PI / 2.0) - target_angle);
+    }
+}
+
+pub fn timer_update(mut timer_text_query: Query<(&mut Text, &mut SterbTime)>, time: Res<Time>) {
+    for (mut text, mut sterb) in &mut timer_text_query {
+        sterb.0.tick(time.delta());
+        let seconds_left = SECONDS_IN_TIMER - sterb.0.elapsed_secs();
+        let min_left = (seconds_left / 60.0).floor();
+        let sec_remainder = (seconds_left - (min_left * 60.0)).floor();
+        text.0 = format!("00:{:0>2}:{:0>2}", min_left, sec_remainder);
     }
 }
