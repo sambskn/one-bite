@@ -1,9 +1,11 @@
 use std::f32::consts::PI;
 
 use bevy::{prelude::*, window::WindowResolution};
+use floating_text::{NewText, handle_new_text_event, update_floating_text};
 use player::Player;
 use ui::{Arrow, SECONDS_IN_TIMER, SterbTime};
 use world::{TILE_SIZE, Target, WORLD_HEIGHT, WORLD_WIDTH, WorldMap, generate_world};
+mod floating_text;
 mod menu;
 mod player;
 mod ui;
@@ -28,6 +30,7 @@ fn main() {
             }),
             ..default()
         }))
+        .add_event::<NewText>()
         .insert_state(GameState::MainMenu)
         .add_systems(Startup, menu::menu_setup)
         .add_systems(
@@ -47,6 +50,8 @@ fn main() {
             Update,
             handle_gamepad_input.run_if(in_state(GameState::Movement)),
         )
+        .add_systems(Update, handle_new_text_event)
+        .add_systems(Update, update_floating_text)
         .add_systems(Update, timer_update.run_if(in_state(GameState::Movement)))
         .run();
 }
@@ -77,6 +82,7 @@ const MID_AIR_SPEED_MULT: usize = 1;
 
 fn handle_gamepad_input(
     mut query: Query<(&mut Player, &mut Transform)>,
+    mut ev_new_text: EventWriter<NewText>,
     world: Res<WorldMap>,
     gamepads: Query<&Gamepad>,
     time: Res<Time>,
@@ -90,6 +96,11 @@ fn handle_gamepad_input(
             let curr_height = player.get_height(time.elapsed_secs_f64());
             if curr_height == 0.0 && player.jump_start.is_some() {
                 player.jump_start = None;
+                ev_new_text.write(NewText(
+                    "gorb borked".to_string(),
+                    player_transform.translation.x,
+                    player_transform.translation.y,
+                ));
             }
             let grid_val =
                 match world.get_val_at_coord(player.grid_pos.x as i32, player.grid_pos.y as i32) {
