@@ -8,6 +8,9 @@ use rand::Rng;
 pub const WORLD_WIDTH: usize = 30;
 pub const WORLD_HEIGHT: usize = 30;
 
+#[derive(Component)]
+pub struct WorldContent;
+
 #[derive(Resource, Clone, Copy)]
 pub struct WorldMap {
     pub vals: [usize; WORLD_WIDTH * WORLD_HEIGHT],
@@ -63,6 +66,7 @@ pub fn generate_world(
         ),
     };
     commands.spawn((
+        WorldContent,
         Sprite::from_image(target_texture),
         Transform::from_xyz(
             target.position.x * TILE_SIZE,
@@ -88,8 +92,14 @@ pub fn generate_world(
                 y as f32 * TILE_SIZE,
                 -10.0 + val, // should be back in the back
             );
-            commands.spawn((sprite, transform));
+            commands.spawn((sprite, transform, WorldContent));
         }
     }
     commands.insert_resource(world_map);
+}
+
+pub fn clear_world(mut commands: Commands, world_content_query: Query<Entity, With<WorldContent>>) {
+    for world_entity in &world_content_query {
+        commands.entity(world_entity).despawn();
+    }
 }

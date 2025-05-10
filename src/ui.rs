@@ -2,6 +2,8 @@ use std::time::Duration;
 
 use bevy::prelude::*;
 
+use crate::world::WorldContent;
+
 #[derive(Component)]
 pub struct Arrow;
 
@@ -22,6 +24,7 @@ pub fn setup_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
     };
 
     commands.spawn((
+        WorldContent,
         Node {
             position_type: PositionType::Absolute,
             left: Val::Px(0.0),

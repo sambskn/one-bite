@@ -1,10 +1,12 @@
 use std::f32::consts::PI;
 
 use bevy::{prelude::*, window::WindowResolution};
+use dialogue::{CurrentDialogue, DialogueEffect};
 use floating_text::{NewText, handle_new_text_event, update_floating_text};
 use player::Player;
 use ui::{Arrow, SECONDS_IN_TIMER, SterbTime};
-use world::{TILE_SIZE, Target, WORLD_HEIGHT, WORLD_WIDTH, WorldMap, generate_world};
+use world::{TILE_SIZE, Target, WORLD_HEIGHT, WORLD_WIDTH, WorldContent, WorldMap, generate_world};
+mod dialogue;
 mod floating_text;
 mod menu;
 mod player;
@@ -12,7 +14,7 @@ mod ui;
 mod world;
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Default, States)]
-enum GameState {
+pub enum GameState {
     #[default]
     MainMenu,
     Dialogue,
@@ -21,7 +23,6 @@ enum GameState {
 
 fn main() {
     App::new()
-        .insert_resource(ClearColor(Color::linear_rgba(0.0, 0.0, 0.0, 1.0)))
         .add_plugins(DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {
                 resolution: WindowResolution::new(600.0, 500.0),
@@ -31,8 +32,11 @@ fn main() {
             ..default()
         }))
         .add_event::<NewText>()
+        .insert_resource(ClearColor(Color::linear_rgba(0.0, 0.0, 0.0, 1.0)))
+        .insert_resource(CurrentDialogue::empty())
         .insert_state(GameState::MainMenu)
         .add_systems(Startup, menu::menu_setup)
+        .add_systems(OnEnter(GameState::MainMenu), menu::menu_setup)
         .add_systems(
             Update,
             handle_gamepad_input_menu.run_if(in_state(GameState::MainMenu)),
@@ -41,6 +45,9 @@ fn main() {
         .add_systems(OnExit(GameState::MainMenu), setup)
         .add_systems(OnExit(GameState::MainMenu), generate_world)
         .add_systems(OnExit(GameState::MainMenu), ui::setup_ui)
+        .add_systems(OnEnter(GameState::Dialogue), dialogue::prepare_dialogue)
+        .add_systems(OnExit(GameState::Dialogue), dialogue::cleanup_dialogue)
+        .add_systems(OnEnter(GameState::MainMenu), world::clear_world)
         .add_systems(
             Update,
             camera_transform_update.run_if(in_state(GameState::Movement)),
@@ -50,17 +57,26 @@ fn main() {
             Update,
             handle_gamepad_input.run_if(in_state(GameState::Movement)),
         )
+        .add_systems(
+            Update,
+            dialogue::handle_gamepad_input.run_if(in_state(GameState::Dialogue)),
+        )
         .add_systems(Update, handle_new_text_event)
         .add_systems(Update, update_floating_text)
         .add_systems(Update, timer_update.run_if(in_state(GameState::Movement)))
+        .add_systems(
+            Update,
+            check_for_player_on_target.run_if(in_state(GameState::Movement)),
+        )
         .run();
 }
 
 fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     let camera = Camera2d::default();
-    commands.spawn(camera);
+    commands.spawn((camera, WorldContent));
 
     commands.spawn((
+        WorldContent,
         Sprite::from_image(asset_server.load("dude.png")),
         Transform::from_xyz(
             (WORLD_WIDTH as f32 / 2.0).round() * TILE_SIZE,
@@ -212,5 +228,23 @@ pub fn timer_update(mut timer_text_query: Query<(&mut Text, &mut SterbTime)>, ti
         let min_left = (seconds_left / 60.0).floor();
         let sec_remainder = (seconds_left - (min_left * 60.0)).floor();
         text.0 = format!("00:{:0>2}:{:0>2}", min_left, sec_remainder);
+    }
+}
+
+pub fn check_for_player_on_target(
+    player_query: Query<&Player>,
+    target_query: Query<&Target>,
+    mut next_game_state: ResMut<NextState<GameState>>,
+    mut current_dialogue: ResMut<CurrentDialogue>,
+) {
+    for player in &player_query {
+        for target in &target_query {
+            if player.grid_pos == target.position {
+                current_dialogue.message = "you delivered da gorbs ya bruiser".to_string();
+                current_dialogue.effects =
+                    vec![DialogueEffect::GorbEmpty, DialogueEffect::GameOver];
+                next_game_state.set(GameState::Dialogue);
+            }
+        }
     }
 }
