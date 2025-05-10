@@ -7,10 +7,10 @@ pub struct NewText(pub String, pub f32, pub f32); // text, x, y
 #[derive(Component)]
 pub struct FloatingText(pub f32); // text, lifetime
 
-const FLOATING_TEXT_FONT_SIZE: f32 = 10.0;
-const FLOATING_TEXT_MOVE_SPEED: f32 = 5.0;
+const FLOATING_TEXT_FONT_SIZE: f32 = 16.0;
+const FLOATING_TEXT_MOVE_SPEED: f32 = 1.5;
 const FLOATING_TEXT_Z: f32 = 6.0;
-const FLOATING_TEXT_LIFETIME_MS: f32 = 1500.0;
+const FLOATING_TEXT_LIFETIME_MS: f32 = 2000.0;
 
 pub fn handle_new_text_event(
     mut ev_new_text: EventReader<NewText>,
@@ -19,7 +19,7 @@ pub fn handle_new_text_event(
 ) {
     for ev in ev_new_text.read() {
         // make a new text entity
-        let font = asset_server.load("fonts/PressStart2P.ttf");
+        let font = asset_server.load("castlevainia3nes.ttf");
         let text_font = TextFont {
             font,
             font_size: FLOATING_TEXT_FONT_SIZE,
@@ -27,10 +27,18 @@ pub fn handle_new_text_event(
         };
         commands.spawn((
             Text2d::new(ev.0.to_string()),
-            text_font,
+            text_font.clone(),
             Anchor::BottomCenter,
             Transform::from_xyz(ev.1, ev.2, FLOATING_TEXT_Z),
             TextColor(Color::Srgba(Srgba::rgb(1.0, 1.0, 1.0))),
+            FloatingText(FLOATING_TEXT_LIFETIME_MS),
+        ));
+        commands.spawn((
+            Text2d::new(ev.0.to_string()),
+            text_font,
+            Anchor::BottomCenter,
+            Transform::from_xyz(ev.1 + 2.0, ev.2 - 2.0, FLOATING_TEXT_Z - 0.1),
+            TextColor(Color::Srgba(Srgba::rgb(0.0, 0.0, 0.0))),
             FloatingText(FLOATING_TEXT_LIFETIME_MS),
         ));
     }
@@ -50,7 +58,13 @@ pub fn update_floating_text(
             // update pos of text (and opacity??)
             transform.translation +=
                 Vec3::new(0.0, FLOATING_TEXT_MOVE_SPEED * time.delta_secs(), 0.0);
-            text_color.0 = Color::srgba(1.0, 1.0, 1.0, floating_text.0 / FLOATING_TEXT_LIFETIME_MS);
+            let current_color = text_color.0.to_srgba();
+            text_color.0 = Color::srgba(
+                current_color.red,
+                current_color.green,
+                current_color.blue,
+                floating_text.0 / FLOATING_TEXT_LIFETIME_MS,
+            );
         }
     }
 }
