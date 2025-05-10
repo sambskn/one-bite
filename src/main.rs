@@ -321,7 +321,7 @@ pub fn check_for_player_on_target(
                     }
                     2 => {
                         current_dialogue.message =
-                            "you did all you could to get these two gorbs".to_string();
+                            "you did all you could to get these two gorbs - and it sucks, you suck".to_string();
                         current_dialogue.effects = vec![
                             DialogueEffect::IncreaseBlood(100),
                             DialogueEffect::ResetTargetLoc,
