@@ -1,5 +1,9 @@
 use crate::GameState;
+use crate::player::Player;
+use crate::ui::SterbTime;
+use crate::world::{TILE_SIZE, Target, WORLD_HEIGHT, WORLD_WIDTH};
 use bevy::prelude::*;
+use rand::Rng;
 
 #[derive(Resource)]
 pub struct CurrentDialogue {
@@ -20,6 +24,9 @@ impl CurrentDialogue {
 pub enum DialogueEffect {
     GorbEmpty,
     GameOver,
+    IncreaseBlood(i32),
+    ResetTargetLoc,
+    BonusTime,
 }
 
 #[derive(Component)]
@@ -91,6 +98,9 @@ pub fn cleanup_dialogue(mut commands: Commands, dialogue_query: Query<Entity, Wi
 
 pub fn handle_gamepad_input(
     mut next_game_state: ResMut<NextState<GameState>>,
+    mut player_query: Query<&mut Player>,
+    mut target_query: Query<(&mut Target, &mut Transform)>,
+    mut sterb_query: Query<&mut SterbTime>,
     gamepads: Query<&Gamepad>,
     current_dialogue: Res<CurrentDialogue>,
     keyboard_input: Res<ButtonInput<KeyCode>>,
@@ -108,7 +118,39 @@ pub fn handle_gamepad_input(
         if current_dialogue.effects.contains(&DialogueEffect::GameOver) {
             next_game_state.set(GameState::MainMenu);
         } else {
+            // do whatever
             next_game_state.set(GameState::Movement);
+            for effect in current_dialogue.effects.iter() {
+                match effect {
+                    DialogueEffect::IncreaseBlood(blood_add) => {
+                        for mut player in &mut player_query {
+                            player.blood_on_your_hands += blood_add;
+                        }
+                    }
+                    DialogueEffect::GorbEmpty => {
+                        for mut player in &mut player_query {
+                            player.gorb_count = 0;
+                        }
+                    }
+                    DialogueEffect::BonusTime => {
+                        for mut sterb in &mut sterb_query {
+                            sterb.0.reset();
+                        }
+                    }
+                    DialogueEffect::ResetTargetLoc => {
+                        for (mut target, mut transform) in &mut target_query {
+                            let mut rng = rand::rng();
+                            target.position = Vec2::new(
+                                rng.random_range(0..WORLD_WIDTH) as f32,
+                                rng.random_range(0..WORLD_HEIGHT) as f32,
+                            );
+                            transform.translation.x = target.position.x * TILE_SIZE;
+                            transform.translation.y = target.position.y * TILE_SIZE;
+                        }
+                    }
+                    _ => {}
+                }
+            }
         }
     }
 }

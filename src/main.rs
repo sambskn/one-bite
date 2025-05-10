@@ -3,9 +3,11 @@ use std::f32::consts::PI;
 use bevy::{prelude::*, window::WindowResolution};
 use dialogue::{CurrentDialogue, DialogueEffect};
 use floating_text::{NewText, handle_new_text_event, update_floating_text};
-use player::Player;
+use player::{DEFAULT_GORB_COUNT, Player};
 use ui::{Arrow, SECONDS_IN_TIMER, SterbTime};
-use world::{TILE_SIZE, Target, WORLD_HEIGHT, WORLD_WIDTH, WorldContent, WorldMap, generate_world};
+use world::{
+    GorbHole, TILE_SIZE, Target, WORLD_HEIGHT, WORLD_WIDTH, WorldContent, WorldMap, generate_world,
+};
 mod dialogue;
 mod floating_text;
 mod menu;
@@ -68,6 +70,10 @@ fn main() {
         .add_systems(
             Update,
             check_for_player_on_target.run_if(in_state(GameState::Movement)),
+        )
+        .add_systems(
+            Update,
+            check_for_player_on_gorb_hole.run_if(in_state(GameState::Movement)),
         )
         .run();
 }
@@ -254,13 +260,33 @@ pub fn arrow_update(
     }
 }
 
-pub fn timer_update(mut timer_text_query: Query<(&mut Text, &mut SterbTime)>, time: Res<Time>) {
+pub fn timer_update(
+    player_query: Query<&Player>,
+    mut timer_text_query: Query<(&mut Text, &mut SterbTime)>,
+    time: Res<Time>,
+    mut next_game_state: ResMut<NextState<GameState>>,
+    mut current_dialogue: ResMut<CurrentDialogue>,
+) {
+    let mut player_blood = 0;
+    for player in &player_query {
+        player_blood = player.blood_on_your_hands;
+    }
+
     for (mut text, mut sterb) in &mut timer_text_query {
         sterb.0.tick(time.delta());
-        let seconds_left = SECONDS_IN_TIMER - sterb.0.elapsed_secs();
-        let min_left = (seconds_left / 60.0).floor();
-        let sec_remainder = (seconds_left - (min_left * 60.0)).floor();
-        text.0 = format!("00:{:0>2}:{:0>2}", min_left, sec_remainder);
+        if sterb.0.finished() {
+            current_dialogue.message = format!(
+                "worthless gorb transporter, blood of {} gorbless is on your hands. try again.",
+                player_blood
+            );
+            current_dialogue.effects = vec![DialogueEffect::GorbEmpty, DialogueEffect::GameOver];
+            next_game_state.set(GameState::Dialogue);
+        } else {
+            let seconds_left = SECONDS_IN_TIMER - sterb.0.elapsed_secs();
+            let min_left = (seconds_left / 60.0).floor();
+            let sec_remainder = (seconds_left - (min_left * 60.0)).floor();
+            text.0 = format!("00:{:0>2}:{:0>2}", min_left, sec_remainder);
+        }
     }
 }
 
@@ -276,36 +302,81 @@ pub fn check_for_player_on_target(
                 match player.gorb_count {
                     0 => {
                         current_dialogue.message =
-                            "no gorbs, the children will perish, scoundrel".to_string();
-                        current_dialogue.effects = vec![DialogueEffect::GameOver];
+                            "you come bearing no gorbs, the children will perish, scoundrel"
+                                .to_string();
+                        current_dialogue.effects = vec![
+                            DialogueEffect::IncreaseBlood(300),
+                            DialogueEffect::ResetTargetLoc,
+                        ];
                     }
                     1 => {
                         current_dialogue.message =
                             "one gorb does not a savior make, how can we choose who will live?"
                                 .to_string();
-                        current_dialogue.effects =
-                            vec![DialogueEffect::GameOver, DialogueEffect::GorbEmpty];
+                        current_dialogue.effects = vec![
+                            DialogueEffect::IncreaseBlood(250),
+                            DialogueEffect::ResetTargetLoc,
+                            DialogueEffect::GorbEmpty,
+                        ];
                     }
                     2 => {
                         current_dialogue.message =
                             "you did all you could to get these two gorbs".to_string();
-                        current_dialogue.effects =
-                            vec![DialogueEffect::GameOver, DialogueEffect::GorbEmpty];
+                        current_dialogue.effects = vec![
+                            DialogueEffect::IncreaseBlood(100),
+                            DialogueEffect::ResetTargetLoc,
+                            DialogueEffect::GorbEmpty,
+                        ];
                     }
-                    3..=5 => {
+                    3..=4 => {
+                        current_dialogue.message = "meager gorb amount! but passable".to_string();
+                        current_dialogue.effects = vec![
+                            DialogueEffect::IncreaseBlood(70),
+                            DialogueEffect::GorbEmpty,
+                            DialogueEffect::ResetTargetLoc,
+                            DialogueEffect::BonusTime,
+                        ];
+                    }
+                    5 => {
                         current_dialogue.message =
-                            "a wealth of gorbs! chirldren will live!".to_string();
-                        current_dialogue.effects =
-                            vec![DialogueEffect::GameOver, DialogueEffect::GorbEmpty];
+                            "a wealth of gorbs! some chirldren will live!".to_string();
+                        current_dialogue.effects = vec![
+                            DialogueEffect::IncreaseBlood(15),
+                            DialogueEffect::GorbEmpty,
+                            DialogueEffect::ResetTargetLoc,
+                            DialogueEffect::BonusTime,
+                        ];
                     }
                     _ => {
                         current_dialogue.message =
                             "we know not how many gorbs were recieved".to_string();
-                        current_dialogue.effects =
-                            vec![DialogueEffect::GameOver, DialogueEffect::GorbEmpty];
+                        current_dialogue.effects = vec![
+                            DialogueEffect::IncreaseBlood(5),
+                            DialogueEffect::GorbEmpty,
+                            DialogueEffect::ResetTargetLoc,
+                        ];
                     }
                 }
                 next_game_state.set(GameState::Dialogue);
+            }
+        }
+    }
+}
+
+pub fn check_for_player_on_gorb_hole(
+    mut player_query: Query<&mut Player>,
+    gorb_hole_query: Query<&GorbHole>,
+    mut ev_new_text: EventWriter<NewText>,
+) {
+    for mut player in &mut player_query {
+        for gorb_hole in &gorb_hole_query {
+            if player.grid_pos == gorb_hole.position && player.gorb_count != DEFAULT_GORB_COUNT {
+                player.gorb_count = DEFAULT_GORB_COUNT;
+                ev_new_text.write(NewText(
+                    "grob refill".to_string(),
+                    player.grid_pos.x * TILE_SIZE,
+                    player.grid_pos.y * TILE_SIZE,
+                ));
             }
         }
     }

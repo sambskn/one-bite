@@ -5,8 +5,8 @@ use noise::{
 };
 use rand::Rng;
 
-pub const WORLD_WIDTH: usize = 30;
-pub const WORLD_HEIGHT: usize = 30;
+pub const WORLD_WIDTH: usize = 100;
+pub const WORLD_HEIGHT: usize = 100;
 
 #[derive(Component)]
 pub struct WorldContent;
@@ -32,6 +32,11 @@ impl WorldMap {
 
 #[derive(Component)]
 pub struct Target {
+    pub position: Vec2,
+}
+
+#[derive(Component)]
+pub struct GorbHole {
     pub position: Vec2,
 }
 
@@ -75,6 +80,22 @@ pub fn generate_world(
         ),
         target,
     ));
+    // spawn gorb home
+    let gorb_hole_texture = asset_server.load("gorb_hole.png");
+    let gorm_hole = GorbHole {
+        position: Vec2::new((WORLD_WIDTH / 2) as f32, (WORLD_HEIGHT / 2) as f32),
+    };
+    commands.spawn((
+        WorldContent,
+        Sprite::from_image(gorb_hole_texture),
+        Transform::from_xyz(
+            gorm_hole.position.x * TILE_SIZE,
+            gorm_hole.position.y * TILE_SIZE,
+            4.0,
+        ),
+        gorm_hole,
+    ));
+
     for y in 0..WORLD_WIDTH {
         for x in 0..WORLD_HEIGHT {
             let val = (plane_map_builder.get_value(x, y) as f32) + 0.5;
