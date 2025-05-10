@@ -1,3 +1,5 @@
+use crate::GameState;
+use crate::dialogue::CurrentDialogue;
 use bevy::prelude::*;
 use noise::{
     Fbm, Perlin,
@@ -45,6 +47,8 @@ pub fn generate_world(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
+    mut next_game_state: ResMut<NextState<GameState>>,
+    mut current_dialogue: ResMut<CurrentDialogue>,
 ) {
     // generate noise
     let fbm = Fbm::<Perlin>::default();
@@ -117,6 +121,10 @@ pub fn generate_world(
         }
     }
     commands.insert_resource(world_map);
+
+    current_dialogue.message = "you emerge from the gorb hole with ortfinder and gorbs. many lives depend on your careful and speedy gorb transport to nearby orts. go before you perish. gorb delivery will keep you alive.".to_string();
+    current_dialogue.effects = vec![];
+    next_game_state.set(GameState::Dialogue);
 }
 
 pub fn clear_world(mut commands: Commands, world_content_query: Query<Entity, With<WorldContent>>) {

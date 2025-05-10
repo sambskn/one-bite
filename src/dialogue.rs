@@ -68,7 +68,7 @@ pub fn prepare_dialogue(
                 justify_content: JustifyContent::Center,
                 align_items: AlignItems::Center,
                 flex_direction: FlexDirection::Column,
-                padding: UiRect::all(Val::Px(16.0)),
+                padding: UiRect::all(Val::Px(18.0)),
                 margin: UiRect::all(Val::Px(8.0)),
                 ..default()
             },
@@ -82,7 +82,7 @@ pub fn prepare_dialogue(
                 Text::new(current_dialogue.message.clone()),
                 TextFont {
                     font: asset_server.load("castlevainia3nes.ttf"),
-                    font_size: 24.0,
+                    font_size: 18.0,
                     ..default()
                 },
             ),],

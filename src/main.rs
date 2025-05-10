@@ -328,8 +328,19 @@ pub fn check_for_player_on_target(
                             DialogueEffect::GorbEmpty,
                         ];
                     }
-                    3..=4 => {
-                        current_dialogue.message = "meager gorb amount! but passable".to_string();
+                    3 => {
+                        current_dialogue.message =
+                            "they will fight each other for these gorbs...".to_string();
+                        current_dialogue.effects = vec![
+                            DialogueEffect::IncreaseBlood(136),
+                            DialogueEffect::GorbEmpty,
+                            DialogueEffect::ResetTargetLoc,
+                        ];
+                    }
+                    4 => {
+                        current_dialogue.message =
+                            "meager gorbage this is not, many thanks for your transport"
+                                .to_string();
                         current_dialogue.effects = vec![
                             DialogueEffect::IncreaseBlood(70),
                             DialogueEffect::GorbEmpty,
@@ -373,7 +384,7 @@ pub fn check_for_player_on_gorb_hole(
             if player.grid_pos == gorb_hole.position && player.gorb_count != DEFAULT_GORB_COUNT {
                 player.gorb_count = DEFAULT_GORB_COUNT;
                 ev_new_text.write(NewText(
-                    "grob refill".to_string(),
+                    "gorbs chamber refill".to_string(),
                     player.grid_pos.x * TILE_SIZE,
                     player.grid_pos.y * TILE_SIZE,
                 ));

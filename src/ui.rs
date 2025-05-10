@@ -17,7 +17,7 @@ pub struct Gorb;
 #[derive(Component)]
 pub struct SterbTime(pub Timer);
 
-pub const SECONDS_IN_TIMER: f32 = 60.0;
+pub const SECONDS_IN_TIMER: f32 = 45.0;
 
 pub fn setup_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
     let arrow_texture = asset_server.load("arrow.png");
@@ -87,7 +87,7 @@ pub fn setup_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
                             },
                             ..default()
                         },
-                        Text::new("ordfinder"),
+                        Text::new("ortfinder"),
                         TextFont {
                             font: asset_server.load("castlevainia3nes.ttf"),
                             font_size: 12.0,
@@ -122,7 +122,7 @@ pub fn setup_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
                             },
                             ..default()
                         },
-                        Text::new("gorbs in der chamber"),
+                        Text::new("gorbs chamber"),
                         TextFont {
                             font: asset_server.load("castlevainia3nes.ttf"),
                             font_size: 12.0,
@@ -180,7 +180,7 @@ pub fn setup_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
                             },
                             ..default()
                         },
-                        Text::new("sterbenzeit"),
+                        Text::new("dead time"),
                         TextFont {
                             font: asset_server.load("castlevainia3nes.ttf"),
                             font_size: 12.0,
