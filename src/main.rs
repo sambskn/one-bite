@@ -102,85 +102,100 @@ fn handle_gamepad_input(
     mut ev_new_text: EventWriter<NewText>,
     world: Res<WorldMap>,
     gamepads: Query<&Gamepad>,
+    keyboard_input: Res<ButtonInput<KeyCode>>,
     time: Res<Time>,
 ) {
+    let mut player_dir = Vec2::ZERO;
+    let mut jump_just_pressed = false;
     for gamepad in gamepads.iter() {
-        let gamepad_left_stick = gamepad.left_stick();
-        for (mut player, mut player_transform) in &mut query {
-            if gamepad.just_pressed(GamepadButton::South) && player.jump_start.is_none() {
-                player.jump_start = Some(time.elapsed_secs_f64())
-            }
-            let curr_height = player.get_height(time.elapsed_secs_f64());
-            if curr_height == 0.0 && player.jump_start.is_some() {
-                player.jump_start = None;
-                if player.gorb_count != 0 {
-                    ev_new_text.write(NewText(
-                        "gorb borked".to_string(),
-                        player_transform.translation.x,
-                        player_transform.translation.y,
-                    ));
-                } else {
-                    ev_new_text.write(NewText(
-                        "gorbless".to_string(),
-                        player_transform.translation.x,
-                        player_transform.translation.y,
-                    ));
-                }
-                player.gorb_count = if player.gorb_count == 0 {
-                    0
-                } else {
-                    player.gorb_count - 1
-                };
-            }
-            let grid_val =
-                match world.get_val_at_coord(player.grid_pos.x as i32, player.grid_pos.y as i32) {
-                    Some(val) => val,
-                    None => 0,
-                } + 1;
-            player_transform.scale = Vec3::splat(1.0) * (curr_height + (grid_val as f32 / 16.0));
-            let val_on_grid = if curr_height > 0.0 {
-                MID_AIR_SPEED_MULT
+        player_dir = gamepad.left_stick();
+        jump_just_pressed = gamepad.just_pressed(GamepadButton::South);
+    }
+    if player_dir == Vec2::ZERO {
+        if keyboard_input.pressed(KeyCode::ArrowRight) {
+            player_dir.x += 1.0;
+        }
+        if keyboard_input.pressed(KeyCode::ArrowUp) {
+            player_dir.y += 1.0;
+        }
+        if keyboard_input.pressed(KeyCode::ArrowLeft) {
+            player_dir.x += -1.0;
+        }
+        if keyboard_input.pressed(KeyCode::ArrowDown) {
+            player_dir.y += -1.0;
+        }
+        player_dir = player_dir.clamp_length_max(1.0);
+    }
+    if !jump_just_pressed {
+        jump_just_pressed = keyboard_input.just_pressed(KeyCode::Space);
+    }
+    for (mut player, mut player_transform) in &mut query {
+        if jump_just_pressed && player.jump_start.is_none() {
+            player.jump_start = Some(time.elapsed_secs_f64())
+        }
+        let curr_height = player.get_height(time.elapsed_secs_f64());
+        if curr_height == 0.0 && player.jump_start.is_some() {
+            player.jump_start = None;
+            if player.gorb_count != 0 {
+                ev_new_text.write(NewText(
+                    "gorb borked".to_string(),
+                    player_transform.translation.x,
+                    player_transform.translation.y,
+                ));
             } else {
-                grid_val
+                ev_new_text.write(NewText(
+                    "gorbless".to_string(),
+                    player_transform.translation.x,
+                    player_transform.translation.y,
+                ));
+            }
+            player.gorb_count = if player.gorb_count == 0 {
+                0
+            } else {
+                player.gorb_count - 1
             };
-            let delta_f32 = time.delta_secs_f64() as f32;
-            let dir_times_speed_and_time = gamepad_left_stick * player.speed / delta_f32;
-            if dir_times_speed_and_time.length() > 0.0 {
-                player.velocity += dir_times_speed_and_time * (val_on_grid as f32 / 16.0);
+        }
+        let grid_val =
+            match world.get_val_at_coord(player.grid_pos.x as i32, player.grid_pos.y as i32) {
+                Some(val) => val,
+                None => 0,
+            } + 1;
+        player_transform.scale = Vec3::splat(1.0) * (curr_height + (grid_val as f32 / 16.0));
+        let val_on_grid = if curr_height > 0.0 {
+            MID_AIR_SPEED_MULT
+        } else {
+            grid_val
+        };
+        let delta_f32 = time.delta_secs_f64() as f32;
+        let dir_times_speed_and_time = player_dir * player.speed / delta_f32;
+        if dir_times_speed_and_time.length() > 0.0 {
+            player.velocity += dir_times_speed_and_time * (val_on_grid as f32 / 16.0);
+        }
+        if player.velocity.length() > MIN_SPEED {
+            player.velocity *= if curr_height > 0.0 {
+                MID_AIR_SLOWDOWN
+            } else {
+                PLAYER_SLOWDOWN
+            };
+            let new_vel = player.velocity.length();
+            if new_vel > MAX_VEL {
+                player.velocity *= 1.0 / (new_vel / MAX_VEL);
             }
-            if player.velocity.length() > MIN_SPEED {
-                player.velocity *= if curr_height > 0.0 {
-                    MID_AIR_SLOWDOWN
-                } else {
-                    PLAYER_SLOWDOWN
-                };
-                let new_vel = player.velocity.length();
-                if new_vel > MAX_VEL {
-                    player.velocity *= 1.0 / (new_vel / MAX_VEL);
-                }
-                player_transform.translation += Vec3::new(
-                    player.velocity.x * delta_f32,
-                    player.velocity.y * delta_f32,
-                    0.0,
-                );
-                player.grid_pos.x = (player_transform.translation.x / TILE_SIZE).round();
-                if player.grid_pos.x < 0.0 {
-                    player.grid_pos.x = 0.0
-                }
-                player.grid_pos.y = (player_transform.translation.y / TILE_SIZE).round();
-                if player.grid_pos.y < 0.0 {
-                    player.grid_pos.y = 0.0
-                }
-            } else if player.velocity != Vec2::ZERO {
-                player.velocity = Vec2::ZERO;
+            player_transform.translation += Vec3::new(
+                player.velocity.x * delta_f32,
+                player.velocity.y * delta_f32,
+                0.0,
+            );
+            player.grid_pos.x = (player_transform.translation.x / TILE_SIZE).round();
+            if player.grid_pos.x < 0.0 {
+                player.grid_pos.x = 0.0
             }
-
-            if gamepad.just_pressed(GamepadButton::DPadUp) {
-                player.speed += 0.5;
+            player.grid_pos.y = (player_transform.translation.y / TILE_SIZE).round();
+            if player.grid_pos.y < 0.0 {
+                player.grid_pos.y = 0.0
             }
-            if gamepad.just_pressed(GamepadButton::DPadDown) {
-                player.speed += -0.5;
-            }
+        } else if player.velocity != Vec2::ZERO {
+            player.velocity = Vec2::ZERO;
         }
     }
 }
@@ -188,11 +203,15 @@ fn handle_gamepad_input(
 fn handle_gamepad_input_menu(
     mut next_game_state: ResMut<NextState<GameState>>,
     gamepads: Query<&Gamepad>,
+    keyboard_input: Res<ButtonInput<KeyCode>>,
 ) {
     for gamepad in gamepads.iter() {
         if gamepad.just_pressed(GamepadButton::South) {
             next_game_state.set(GameState::Movement);
         }
+    }
+    if keyboard_input.just_pressed(KeyCode::Space) {
+        next_game_state.set(GameState::Movement);
     }
 }
 

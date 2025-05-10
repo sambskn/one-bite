@@ -93,6 +93,7 @@ pub fn handle_gamepad_input(
     mut next_game_state: ResMut<NextState<GameState>>,
     gamepads: Query<&Gamepad>,
     current_dialogue: Res<CurrentDialogue>,
+    keyboard_input: Res<ButtonInput<KeyCode>>,
 ) {
     for gamepad in gamepads.iter() {
         if gamepad.just_pressed(GamepadButton::South) {
@@ -101,6 +102,13 @@ pub fn handle_gamepad_input(
             } else {
                 next_game_state.set(GameState::Movement);
             }
+        }
+    }
+    if keyboard_input.just_pressed(KeyCode::Space) {
+        if current_dialogue.effects.contains(&DialogueEffect::GameOver) {
+            next_game_state.set(GameState::MainMenu);
+        } else {
+            next_game_state.set(GameState::Movement);
         }
     }
 }
