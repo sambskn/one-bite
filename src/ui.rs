@@ -2,10 +2,17 @@ use std::time::Duration;
 
 use bevy::prelude::*;
 
+use crate::player::Player;
 use crate::world::WorldContent;
 
 #[derive(Component)]
 pub struct Arrow;
+
+#[derive(Component)]
+pub struct GorbHolderUI;
+
+#[derive(Component)]
+pub struct Gorb;
 
 #[derive(Component)]
 pub struct SterbTime(pub Timer);
@@ -130,7 +137,9 @@ pub fn setup_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
                             flex_direction: FlexDirection::Row,
                             ..default()
                         },
+                        GorbHolderUI,
                         children![(
+                            Gorb,
                             ImageNode {
                                 image: gorb_texture,
                                 ..default()
@@ -195,4 +204,43 @@ pub fn setup_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
             ),
         ],
     ));
+}
+
+pub fn update_gorb_count(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    player_query: Query<&Player>,
+    gorb_holder_query: Query<Entity, With<GorbHolderUI>>,
+    gorb_query: Query<Entity, With<Gorb>>,
+) {
+    let mut ui_gorb_count = 0;
+    for _gorb in &gorb_query {
+        ui_gorb_count += 1;
+    }
+    for &player in player_query {
+        let gorb_count = player.gorb_count;
+        if gorb_count != ui_gorb_count {
+            let gorb_texture = asset_server.load("gorb.png");
+            for gorb_entity in &gorb_query {
+                commands.entity(gorb_entity).despawn();
+            }
+            for gorb_holder_entity in &gorb_holder_query {
+                for _i in 0..gorb_count {
+                    commands.entity(gorb_holder_entity).with_child((
+                        Gorb,
+                        ImageNode {
+                            image: gorb_texture.clone(),
+                            ..default()
+                        },
+                        Node {
+                            max_width: Val::Px(32.0),
+                            max_height: Val::Px(32.0),
+                            margin: UiRect::all(Val::Px(2.0)),
+                            ..default()
+                        },
+                    ));
+                }
+            }
+        }
+    }
 }

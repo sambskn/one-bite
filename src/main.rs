@@ -63,6 +63,7 @@ fn main() {
         )
         .add_systems(Update, handle_new_text_event)
         .add_systems(Update, update_floating_text)
+        .add_systems(Update, ui::update_gorb_count)
         .add_systems(Update, timer_update.run_if(in_state(GameState::Movement)))
         .add_systems(
             Update,
@@ -112,11 +113,24 @@ fn handle_gamepad_input(
             let curr_height = player.get_height(time.elapsed_secs_f64());
             if curr_height == 0.0 && player.jump_start.is_some() {
                 player.jump_start = None;
-                ev_new_text.write(NewText(
-                    "gorb borked".to_string(),
-                    player_transform.translation.x,
-                    player_transform.translation.y,
-                ));
+                if player.gorb_count != 0 {
+                    ev_new_text.write(NewText(
+                        "gorb borked".to_string(),
+                        player_transform.translation.x,
+                        player_transform.translation.y,
+                    ));
+                } else {
+                    ev_new_text.write(NewText(
+                        "gorbless".to_string(),
+                        player_transform.translation.x,
+                        player_transform.translation.y,
+                    ));
+                }
+                player.gorb_count = if player.gorb_count == 0 {
+                    0
+                } else {
+                    player.gorb_count - 1
+                };
             }
             let grid_val =
                 match world.get_val_at_coord(player.grid_pos.x as i32, player.grid_pos.y as i32) {
@@ -240,9 +254,38 @@ pub fn check_for_player_on_target(
     for player in &player_query {
         for target in &target_query {
             if player.grid_pos == target.position {
-                current_dialogue.message = "you delivered da gorbs ya bruiser".to_string();
-                current_dialogue.effects =
-                    vec![DialogueEffect::GorbEmpty, DialogueEffect::GameOver];
+                match player.gorb_count {
+                    0 => {
+                        current_dialogue.message =
+                            "no gorbs, the children will perish, scoundrel".to_string();
+                        current_dialogue.effects = vec![DialogueEffect::GameOver];
+                    }
+                    1 => {
+                        current_dialogue.message =
+                            "one gorb does not a savior make, how can we choose who will live?"
+                                .to_string();
+                        current_dialogue.effects =
+                            vec![DialogueEffect::GameOver, DialogueEffect::GorbEmpty];
+                    }
+                    2 => {
+                        current_dialogue.message =
+                            "you did all you could to get these two gorbs".to_string();
+                        current_dialogue.effects =
+                            vec![DialogueEffect::GameOver, DialogueEffect::GorbEmpty];
+                    }
+                    3..=5 => {
+                        current_dialogue.message =
+                            "a wealth of gorbs! chirldren will live!".to_string();
+                        current_dialogue.effects =
+                            vec![DialogueEffect::GameOver, DialogueEffect::GorbEmpty];
+                    }
+                    _ => {
+                        current_dialogue.message =
+                            "we know not how many gorbs were recieved".to_string();
+                        current_dialogue.effects =
+                            vec![DialogueEffect::GameOver, DialogueEffect::GorbEmpty];
+                    }
+                }
                 next_game_state.set(GameState::Dialogue);
             }
         }

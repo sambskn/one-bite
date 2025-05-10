@@ -3,6 +3,7 @@ use bevy::prelude::*;
 const PLAYER_SPEED: f32 = 7.0;
 const JUMP_TIME_S: f64 = 1.5;
 const JUMP_MAX_HEIGHT: f64 = 2.0;
+const DEFAULT_GORB_COUNT: i32 = 5;
 
 #[derive(Component, Clone, Copy)]
 pub struct Player {
@@ -10,6 +11,7 @@ pub struct Player {
     pub velocity: Vec2,
     pub speed: f32,
     pub jump_start: Option<f64>,
+    pub gorb_count: i32,
 }
 
 impl Player {
@@ -19,6 +21,7 @@ impl Player {
             velocity: Vec2::ZERO,
             speed: PLAYER_SPEED,
             jump_start: None,
+            gorb_count: DEFAULT_GORB_COUNT,
         }
     }
 
@@ -45,6 +48,7 @@ impl Default for Player {
             velocity: Vec2::ZERO,
             speed: PLAYER_SPEED,
             jump_start: None,
+            gorb_count: DEFAULT_GORB_COUNT,
         }
     }
 }

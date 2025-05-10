@@ -63,7 +63,7 @@ pub fn update_floating_text(
                 current_color.red,
                 current_color.green,
                 current_color.blue,
-                floating_text.0 / FLOATING_TEXT_LIFETIME_MS,
+                1.0,
             );
         }
     }
