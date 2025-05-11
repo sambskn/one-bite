@@ -1,5 +1,4 @@
-use bevy::{prelude::*, window::WindowResolution};
-use bevy_rand::prelude::*;
+use bevy::{asset::AssetMetaCheck, prelude::*, window::WindowResolution};
 use dialogue::{CurrentDialogue, DialogueEffect};
 use floating_text::{NewText, handle_new_text_event, update_floating_text};
 use player::{DEFAULT_GORB_COUNT, Player};
@@ -25,15 +24,21 @@ pub enum GameState {
 
 fn main() {
     App::new()
-        .add_plugins(DefaultPlugins.set(WindowPlugin {
-            primary_window: Some(Window {
-                resolution: WindowResolution::new(600.0, 500.0),
-                title: "gorb transporter".to_string(),
-                ..default()
-            }),
-            ..default()
-        }))
-        .add_plugins(EntropyPlugin::<WyRand>::default())
+        .add_plugins(
+            DefaultPlugins
+                .set(WindowPlugin {
+                    primary_window: Some(Window {
+                        resolution: WindowResolution::new(600.0, 500.0),
+                        title: "gorb transporter".to_string(),
+                        ..default()
+                    }),
+                    ..default()
+                })
+                .set(AssetPlugin {
+                    meta_check: AssetMetaCheck::Never,
+                    ..default()
+                }),
+        )
         .add_event::<NewText>()
         .insert_resource(ClearColor(Color::linear_rgba(0.0, 0.0, 0.0, 1.0)))
         .insert_resource(CurrentDialogue::empty())

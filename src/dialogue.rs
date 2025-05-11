@@ -3,8 +3,6 @@ use crate::player::Player;
 use crate::ui::SterbTime;
 use crate::world::{TILE_SIZE, Target, WORLD_HEIGHT, WORLD_WIDTH};
 use bevy::prelude::*;
-use bevy_rand::prelude::{GlobalEntropy, WyRand};
-use rand_core::RngCore;
 
 #[derive(Resource)]
 pub struct CurrentDialogue {
@@ -105,7 +103,7 @@ pub fn handle_gamepad_input(
     gamepads: Query<&Gamepad>,
     current_dialogue: Res<CurrentDialogue>,
     keyboard_input: Res<ButtonInput<KeyCode>>,
-    mut rng: GlobalEntropy<WyRand>,
+    time: Res<Time>,
 ) {
     for gamepad in gamepads.iter() {
         if gamepad.just_pressed(GamepadButton::South) {
@@ -141,11 +139,13 @@ pub fn handle_gamepad_input(
                     }
                     DialogueEffect::ResetTargetLoc => {
                         for (mut target, mut transform) in &mut target_query {
+                            let psuedo_rng_val_1 = time.elapsed_secs_f64() * 100.0
+                                - (time.elapsed_secs_f64() * 100.0).floor();
+                            let psuedo_rng_val_2 = time.elapsed_secs_f64() * 1234.0
+                                - (time.elapsed_secs_f64() * 1234.0).floor();
                             target.position = Vec2::new(
-                                ((rng.next_u32() as f32 / u32::MAX as f32) * WORLD_WIDTH as f32)
-                                    .floor(),
-                                ((rng.next_u32() as f32 / u32::MAX as f32) * WORLD_HEIGHT as f32)
-                                    .floor(),
+                                (psuedo_rng_val_1 as f32 * WORLD_WIDTH as f32).floor(),
+                                (psuedo_rng_val_2 as f32 * WORLD_HEIGHT as f32).floor(),
                             );
                             transform.translation.x = target.position.x * TILE_SIZE;
                             transform.translation.y = target.position.y * TILE_SIZE;

@@ -1,12 +1,11 @@
 use crate::GameState;
 use crate::dialogue::CurrentDialogue;
 use bevy::prelude::*;
-use bevy_rand::prelude::{GlobalEntropy, WyRand};
+
 use noise::{
     Fbm, Perlin,
     utils::{NoiseMapBuilder, PlaneMapBuilder},
 };
-use rand_core::RngCore;
 
 pub const WORLD_WIDTH: usize = 100;
 pub const WORLD_HEIGHT: usize = 100;
@@ -50,7 +49,7 @@ pub fn generate_world(
     mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
     mut next_game_state: ResMut<NextState<GameState>>,
     mut current_dialogue: ResMut<CurrentDialogue>,
-    mut rng: GlobalEntropy<WyRand>,
+    time: Res<Time>,
 ) {
     // generate noise
     let fbm = Fbm::<Perlin>::default();
@@ -70,10 +69,14 @@ pub fn generate_world(
     // and determine random location within world bounds
 
     let target_texture = asset_server.load("haus.png");
+    let psuedo_rng_val_1 =
+        time.elapsed_secs_f64() * 100.0 - (time.elapsed_secs_f64() * 100.0).floor();
+    let psuedo_rng_val_2 =
+        time.elapsed_secs_f64() * 1234.0 - (time.elapsed_secs_f64() * 1234.0).floor();
     let target = Target {
         position: Vec2::new(
-            ((rng.next_u32() as f32 / u32::MAX as f32) * WORLD_WIDTH as f32).floor(),
-            ((rng.next_u32() as f32 / u32::MAX as f32) * WORLD_HEIGHT as f32).floor(),
+            (psuedo_rng_val_1 as f32 * WORLD_WIDTH as f32).floor(),
+            (psuedo_rng_val_2 as f32 * WORLD_HEIGHT as f32).floor(),
         ),
     };
     commands.spawn((

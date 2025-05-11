@@ -17,7 +17,7 @@ pub struct Gorb;
 #[derive(Component)]
 pub struct SterbTime(pub Timer);
 
-pub const SECONDS_IN_TIMER: f32 = 45.0;
+pub const SECONDS_IN_TIMER: f32 = 60.0 * 1.5;
 
 pub fn setup_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
     let arrow_texture = asset_server.load("arrow.png");
