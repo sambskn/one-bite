@@ -17,3 +17,7 @@ opt-level = 3
 
 [target.wasm32-unknown-unknown]
 runner = "wasm-server-runner"
+
+[profile.web-release]
+inherits = "release"
+opt-level = "z"
