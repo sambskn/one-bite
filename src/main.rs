@@ -1,9 +1,9 @@
-use std::f32::consts::PI;
-
 use bevy::{prelude::*, window::WindowResolution};
+use bevy_rand::prelude::*;
 use dialogue::{CurrentDialogue, DialogueEffect};
 use floating_text::{NewText, handle_new_text_event, update_floating_text};
 use player::{DEFAULT_GORB_COUNT, Player};
+use std::f32::consts::PI;
 use ui::{Arrow, SECONDS_IN_TIMER, SterbTime};
 use world::{
     GorbHole, TILE_SIZE, Target, WORLD_HEIGHT, WORLD_WIDTH, WorldContent, WorldMap, generate_world,
@@ -33,6 +33,7 @@ fn main() {
             }),
             ..default()
         }))
+        .add_plugins(EntropyPlugin::<WyRand>::default())
         .add_event::<NewText>()
         .insert_resource(ClearColor(Color::linear_rgba(0.0, 0.0, 0.0, 1.0)))
         .insert_resource(CurrentDialogue::empty())
@@ -321,7 +322,8 @@ pub fn check_for_player_on_target(
                     }
                     2 => {
                         current_dialogue.message =
-                            "you did all you could to get these two gorbs - and it sucks, you suck".to_string();
+                            "you did all you could to get these two gorbs - and it sucks, you suck"
+                                .to_string();
                         current_dialogue.effects = vec![
                             DialogueEffect::IncreaseBlood(100),
                             DialogueEffect::ResetTargetLoc,
